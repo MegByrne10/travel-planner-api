@@ -1,39 +1,27 @@
 # frozen_string_literal: true
 
 class Users::RegistrationsController < Devise::RegistrationsController
-  # include RackSessionsFix
+  include RackSessionsFix
   respond_to :json
   # before_action :configure_sign_up_params, only: [:create]
   # before_action :configure_account_update_params, only: [:update]
 
   protected
 
-  def respond_with(resource, _opts = {})
-    register_success && return if resource.persisted?
-
-    register_failed
+  def respond_with(current_user, opts = {})
+    if resource.persisted?
+      render json: {
+          status: {
+            code: 200,
+            message: 'Signed up successfully.',
+            data: UserSerializer.new(current_user).serializable_hash[:data][:attributes]
+          }
+        }, status: :ok
+    else
+      render json: { message: "User couldn't be created successfully. #{current_user&.errors.full_messages&.to_sentence}" }, 
+        status: :unprocessable_entity
+    end
   end
-
-  def register_success
-    render json: { message: 'Signed up sucessfully.' }, status: :ok, data: UserSerializer.new(current_user).serializable_hash[:data][:attributes]
-  end
-
-  def register_failed
-    render json: { message: "Something went wrong." }, status: :unprocessable_entity
-  end
-
-  # def respond_with(current_user, opts = {})
-  #   if resource.persisted?
-  #     render json: {
-  #       status: { code: 200, message: 'Signed up successfully.' },
-  #       data: UserSerializer.new(current_user).serializable_hash[:data][:attributes]
-  #     }
-  #   else
-  #     render json: {
-  #       status: { message: "User couldn't be created successfully. #{current_user.errors.full_messages.to_sentence}" }, status: :unprocessable_entity
-  #     }
-  #   end
-  # end
 
   # If you have extra params to permit, append them to the sanitizer.
   # def configure_sign_up_params
